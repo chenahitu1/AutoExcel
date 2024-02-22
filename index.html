@@ -1,36 +1,17 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Excel自动生成</title>
-    <style>
-        table {
-            width: 100%;
-        }
-        th, td {
-            padding: 5px;
-            text-align: center;
-        }
-        input {
-            width: 80%;
-            margin: 5px;
-            padding: 10px;
-            box-sizing: border-box;
-        }
-        button {
-            width: 80%;
-            margin: 5px;
-            padding: 10px;
-            box-sizing: border-box;
-        }
-    </style>
 </head>
+
 <body>
     <h1 id="filename"></h1>
     <table id="excelTable" border="1">
         <tr>
             <th>项目名称</th>
+            <th>项目备注</th>
             <th>单位名称</th>
             <th>数量</th>
             <th>单价</th>
@@ -39,24 +20,25 @@
     </table>
     <br>
     <input type="text" id="filenameInput" placeholder="请输入文件名称">
-    
+
     <br><br>
-    <input type="text" id="projectName" placeholder="请输入第一个项目名称">
-    <br>
-    <input type="text" id="unitName" placeholder="请输入第一个项目单位">
-    <br>
-    <input type="text" id="quantity" placeholder="请输入第一个项目数量">
-    
-    <br>
-    <input type="text" id="price" placeholder="请输入第一个项目单价">
-    <br>
+    <input type="text" id="projectName" placeholder="请输入项目名称">
+    <br><br>
+    <input type="text" id="beizhu" placeholder="请输入项目项目备注">
+    <br><br>
+    <input type="text" id="unitName" placeholder="请输入项目单位">
+    <br><br>
+    <input type="text" id="quantity" placeholder="请输入项目数量">
+
+    <br><br>
+    <input type="text" id="price" placeholder="请输入项目单价">
     <button onclick="addPrice();">下一个</button>
-    <br>
     <button onclick="generateExcel()">结束</button>
+
     <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
-    
+
     <script>
-        let data=[];
+        let data = [];
         let currentRow = 1;
         let totalValue = 0;
         function setFileName() {
@@ -71,17 +53,21 @@
             data.push(document.getElementById('filenameInput').value);
             const table = document.getElementById('excelTable');
             const row = table.insertRow(currentRow);
-            row.insertCell(0).innerHTML = document.getElementById('projectName').value;
-            row.insertCell(1).innerHTML = document.getElementById('unitName').value;
-            row.insertCell(2).innerHTML = document.getElementById('quantity').value;
-            row.insertCell(3).innerHTML = document.getElementById('price').value;
+            // 插入可编辑的输入框
+            row.insertCell(0).innerHTML = `<input type="text" class="editable-input" value="${document.getElementById('projectName').value}">`;
+            row.insertCell(1).innerHTML = `<input type="text" class="editable-input" value="${document.getElementById('beizhu').value}">`;
+            row.insertCell(2).innerHTML = `<input type="text" class="editable-input" value="${document.getElementById('unitName').value}">`;
+            row.insertCell(3).innerHTML = `<input type="text" class="editable-input" value="${document.getElementById('quantity').value}" onchange="updateTotal(this)">`;
+            row.insertCell(4).innerHTML = `<input type="text" class="editable-input" value="${document.getElementById('price').value}" onchange="updateTotal(this)">`;
+
             const total = parseInt(document.getElementById('quantity').value) * parseFloat(document.getElementById('price').value);
-            row.insertCell(4).innerHTML = total;
+            row.insertCell(5).innerHTML = total;
             totalValue += total;
             currentRow++;
 
             // 清空其他输入框的内容
             document.getElementById('projectName').value = '';
+            document.getElementById('beizhu').value = '';
             document.getElementById('unitName').value = '';
             document.getElementById('quantity').value = '';
             document.getElementById('price').value = '';
@@ -89,34 +75,60 @@
             // 隐藏文件名称的输入框
             document.getElementById('filenameInput').style.display = 'none';
         }
+        function updateTotal(input) {
+            const row = input.parentNode.parentNode;
+            const quantity = parseFloat(row.cells[3].querySelector('input').value);
+            const price = parseFloat(row.cells[4].querySelector('input').value);
 
+            const total = quantity * price;
+            row.cells[5].innerHTML = total;
+
+            calculateTotal();
+        }
+
+        function calculateTotal() {
+            totalValue = 0;
+            const table = document.getElementById('excelTable');
+
+            for (let i = 1; i < table.rows.length; i++) {
+                totalValue += parseFloat(table.rows[i].cells[5].innerHTML);
+            }
+
+        }
         function generateExcel() {
             const wb = XLSX.utils.book_new(); // 创建工作薄
 
-            const sheetData = [['项目名称', '单位名称', '数量', '单价', '总价']]; // 表头数据
+            const sheetData = [['项目名称', '项目备注', '单位名称', '数量', '单价', '总价']]; // 表头数据
             const table = document.getElementById('excelTable');
 
+            // 获取表格中的数据
             // 获取表格中的数据
             for (let i = 1; i < table.rows.length; i++) {
                 const rowData = [];
                 const row = table.rows[i];
 
                 for (let j = 0; j < row.cells.length; j++) {
-                    rowData.push(row.cells[j].innerHTML);
+                    if (row.cells[j].querySelector('input')) {
+                        rowData.push(row.cells[j].querySelector('input').value);
+                    } else {
+                        rowData.push(row.cells[j].innerHTML);
+                    }
                 }
 
                 sheetData.push(rowData);
             }
-
             // 添加最后一行，最后一行的第一列值为总价，第五列值为每行总价之和
-            sheetData.push(['总价', '', '', '', totalValue]);
+            sheetData.push(['总价', '', '', '', '', totalValue]);
 
             const ws = XLSX.utils.aoa_to_sheet(sheetData); // 创建工作表
             XLSX.utils.book_append_sheet(wb, ws, 'Sheet1'); // 将工作表添加到工作薄中
 
             const fileName = document.getElementById('filename').innerHTML;
-            XLSX.writeFile(wb, data[0]+'.xlsx'); 
+            XLSX.writeFile(wb, data[0] + '.xlsx');
         }
+
+
     </script>
 </body>
+
 </html>
