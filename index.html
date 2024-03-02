@@ -5,38 +5,49 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Excel自动生成</title>
-        <style>
+    <style>
         table {
             width: 100%;
         }
-        th, td {
+
+        th,
+        td {
             padding: 5px;
             text-align: center;
         }
+
         input {
             width: 80%;
             margin: 5px;
             padding: 10px;
             box-sizing: border-box;
         }
+
         button {
             width: 80%;
             margin: 5px;
             padding: 10px;
             box-sizing: border-box;
         }
+
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
     </style>
 </head>
 
 <body>
     <h1 id="filename"></h1>
+    <h2>好莱屋装饰报表</h2>
     <table id="excelTable" border="1">
         <tr>
             <th>项目名称</th>
-            <th>项目备注</th>
             <th>单位名称</th>
             <th>数量</th>
             <th>单价</th>
+            <th>项目备注</th>
             <th>总价</th>
         </tr>
     </table>
@@ -46,16 +57,16 @@
     <br><br>
     <input type="text" id="projectName" placeholder="请输入项目名称">
     <br><br>
-    <input type="text" id="beizhu" placeholder="请输入项目项目备注">
-    <br><br>
     <input type="text" id="unitName" placeholder="请输入项目单位">
     <br><br>
     <input type="text" id="quantity" placeholder="请输入项目数量">
-
     <br><br>
     <input type="text" id="price" placeholder="请输入项目单价">
+    <br><br>
+    <input type="text" id="beizhu" placeholder="请输入项目项目备注">
     <button onclick="addPrice();">下一个</button>
     <button onclick="generateExcel()">结束</button>
+
 
     <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
 
@@ -77,10 +88,10 @@
             const row = table.insertRow(currentRow);
             // 插入可编辑的输入框
             row.insertCell(0).innerHTML = `<input type="text" class="editable-input" value="${document.getElementById('projectName').value}">`;
-            row.insertCell(1).innerHTML = `<input type="text" class="editable-input" value="${document.getElementById('beizhu').value}">`;
-            row.insertCell(2).innerHTML = `<input type="text" class="editable-input" value="${document.getElementById('unitName').value}">`;
-            row.insertCell(3).innerHTML = `<input type="text" class="editable-input" value="${document.getElementById('quantity').value}" onchange="updateTotal(this)">`;
-            row.insertCell(4).innerHTML = `<input type="text" class="editable-input" value="${document.getElementById('price').value}" onchange="updateTotal(this)">`;
+            row.insertCell(1).innerHTML = `<input type="text" class="editable-input" value="${document.getElementById('unitName').value}">`;
+            row.insertCell(2).innerHTML = `<input type="text" class="editable-input" value="${document.getElementById('quantity').value}" onchange="updateTotal(this)">`;
+            row.insertCell(3).innerHTML = `<input type="text" class="editable-input" value="${document.getElementById('price').value}" onchange="updateTotal(this)">`;
+            row.insertCell(4).innerHTML = `<input type="text" class="editable-input" value="${document.getElementById('beizhu').value}">`;
 
             const total = parseInt(document.getElementById('quantity').value) * parseFloat(document.getElementById('price').value);
             row.insertCell(5).innerHTML = total;
@@ -99,8 +110,8 @@
         }
         function updateTotal(input) {
             const row = input.parentNode.parentNode;
-            const quantity = parseFloat(row.cells[3].querySelector('input').value);
-            const price = parseFloat(row.cells[4].querySelector('input').value);
+            const quantity = parseFloat(row.cells[2].querySelector('input').value);
+            const price = parseFloat(row.cells[3].querySelector('input').value);
 
             const total = quantity * price;
             row.cells[5].innerHTML = total;
@@ -120,7 +131,7 @@
         function generateExcel() {
             const wb = XLSX.utils.book_new(); // 创建工作薄
 
-            const sheetData = [['项目名称', '项目备注', '单位名称', '数量', '单价', '总价']]; // 表头数据
+            const sheetData = [['项目名称', '单位名称', '数量', '单价', '项目备注', '总价']]; // 表头数据
             const table = document.getElementById('excelTable');
 
             // 获取表格中的数据
@@ -131,9 +142,9 @@
 
                 for (let j = 0; j < row.cells.length; j++) {
                     if (row.cells[j].querySelector('input')) {
-                        rowData.push(row.cells[j].querySelector('input').value);
+                        rowData.push({ v: row.cells[j].querySelector('input').value, s: { font: { name: "宋体", sz: 30 } } });
                     } else {
-                        rowData.push(row.cells[j].innerHTML);
+                        rowData.push({ v: row.cells[j].innerHTML, s: { font: { name: "宋体", sz: 30 } } });
                     }
                 }
 
@@ -143,6 +154,16 @@
             sheetData.push(['总价', '', '', '', '', totalValue]);
 
             const ws = XLSX.utils.aoa_to_sheet(sheetData); // 创建工作表
+            // 设置列宽
+            const wscols = [
+                { wch: 30 }, // 列宽为20个字符
+                { wch: 15 }, // 列宽为15个字符
+                { wch: 10 }, // 列宽为10个字符
+                { wch: 10 }, // 列宽为10个字符
+                { wch: 40 }, // 列宽为30个字符
+                { wch: 15 }  // 列宽为15个字符
+            ];
+            ws['!cols'] = wscols;
             XLSX.utils.book_append_sheet(wb, ws, 'Sheet1'); // 将工作表添加到工作薄中
 
             const fileName = document.getElementById('filename').innerHTML;
